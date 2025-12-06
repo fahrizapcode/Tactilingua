@@ -1,65 +1,182 @@
+"use client";
+
 import Image from "next/image";
+import { useEffect, useState, useRef } from "react";
+
+const brailleMap: Record<string, string> = {
+  "100000": "a",
+  "101000": "b",
+  "110000": "c",
+  "110100": "d",
+  "100100": "e",
+  "111000": "f",
+  "111100": "g",
+  "101100": "h",
+  "011000": "i",
+  "011100": "j",
+  "100010": "k",
+  "101010": "l",
+  "110010": "m",
+  "110110": "n",
+  "100110": "o",
+  "111010": "p",
+  "111110": "q",
+  "101110": "r",
+  "011010": "s",
+  "011110": "t",
+  "100011": "u",
+  "101011": "v",
+  "011101": "w",
+  "110011": "x",
+  "110111": "y",
+  "100111": "z",
+};
+
+const EMPTY_DOTS = [0, 0, 0, 0, 0, 0];
 
 export default function Home() {
+  const [dots, setDots] = useState<number[]>(EMPTY_DOTS);
+  const [text, setText] = useState("");
+  const textRef = useRef<HTMLSpanElement>(null);
+
+  const key = dots.join("");
+  const preview = brailleMap[key] || (dots.some((d) => d === 1) ? "?" : "");
+
+  const toggleDot = (i: number) =>
+    setDots((d) => d.map((v, idx) => (idx === i ? (v ? 0 : 1) : v)));
+
+  const playAudio = (letter: string) => {
+    if (letter) new Audio(`/audios/${letter}.mp3`).play();
+  };
+
+  const handleEnter = () => {
+    if (!preview || preview === "?") return;
+    setText((t) => t + preview);
+    playAudio(preview);
+    setDots(EMPTY_DOTS);
+  };
+
+  const handleBackspace = () => setText((t) => t.slice(0, -1));
+
+  const handleSpace = () => setText((t) => t + " ");
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const actions: Record<string, () => void> = {
+        Enter: handleEnter,
+        Backspace: handleBackspace,
+        " ": handleSpace,
+      };
+
+      if (actions[e.key]) {
+        e.preventDefault();
+        e.stopPropagation();
+        actions[e.key]!();
+        return;
+      }
+
+      if (/^[1-6]$/.test(e.key)) {
+        e.stopPropagation();
+        toggleDot(Number(e.key) - 1);
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [preview]);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
+    <div className="w-[100vw] overflow-hidden h-[100dvh] relative flex justify-end">
+      <Image
+        src="/background.svg"
+        width={100}
+        height={100}
+        alt="background"
+        className="w-auto h-[120vh] sm:h-[130vh] object-cover shrink-0"
+      />
+
+      <header className="absolute w-[100vw] px-6 py-4 flex justify-center md:justify-start">
         <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
+          src="/logo.svg"
           width={100}
-          height={20}
-          priority
+          height={100}
+          alt="logo"
+          className="w-auto h-9"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+      </header>
+
+      <div className="w-[100vw] md:w-[50vw] flex justify-center absolute left-0 top-18 md:ml-12">
+        <div className="w-[92%] sm:w-110 h-146 absolute bg-black opacity-50 md:bg-gradient-to-b from-[#1DBD7F] to-[#DBFD81] md:opacity-100 rounded-xl" />
+
+        <div className="w-[92%] sm:w-110 h-146 z-2 flex flex-col items-center p-4">
+          {/* Display */}
+          <h1 className="w-[90%] bg-white py-3 px-4 rounded-md font-medium text-3xl shadow h-16 flex items-center gap-3 overflow-hidden">
+            {/* TEXT */}
+            <span
+              ref={textRef}
+              className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto whitespace-pre"
+            >
+              <span>{text}</span>
+              <span className="animate-blink text-gray-600">▌</span>
+            </span>
+
+            {/* PREVIEW */}
+            {preview && (
+              <span className="min-w-[48px] flex-shrink-0 text-center px-3 py-1 text-2xl font-bold rounded-md bg-black/5 backdrop-blur-md shadow-sm">
+                {preview}
+              </span>
+            )}
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+
+          {/* Braille dots */}
+          <div className="w-[70%] sm:w-[50%] max-w-50 h-98 grid grid-cols-2 gap-x-6 pt-10">
+            {dots.map((dot, i) => (
+              <button
+                key={i}
+                onClick={() => toggleDot(i)}
+                className={`
+                  w-16 h-16 rounded-full
+                  transition-all duration-200
+                  active:scale-90
+                  border-2 border-white/40
+                  ${dot ? "bg-black shadow-md" : "bg-gray-300 shadow"}
+                  hover:border-white
+                  ${i % 2 ? "justify-self-end" : ""}
+                `}
+              />
+            ))}
+          </div>
+
+          {/* Buttons */}
+          <div className="w-[98%] flex gap-x-1 sm:gap-x-2 mt-4">
+            <button
+              onClick={handleBackspace}
+              className="rounded-md h-13 flex-3 bg-[#FF5D5D] text-white font-medium shadow text-md sm:text-xl active:scale-95 transition"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              Backspace
+            </button>
+
+            <button
+              onClick={handleSpace}
+              className="rounded-md h-13 flex-4 bg-white font-medium shadow text-md sm:text-xl active:scale-95 transition"
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              Space
+            </button>
+
+            <button
+              onClick={handleEnter}
+              disabled={!preview || preview === "?"}
+              className={`rounded-md h-13 flex-3 bg-gradient-to-b from-[#1DBD7F] to-[#DBFD81] font-medium shadow text-md sm:text-xl active:scale-95 transition ${
+                !preview || preview === "?"
+                  ? "opacity-40 cursor-not-allowed"
+                  : ""
+              }`}
+            >
+              Enter
+            </button>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }

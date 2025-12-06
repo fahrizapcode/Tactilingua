@@ -4,6 +4,27 @@
   --background: #ffffff;
   --foreground: #171717;
 }
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE & Edge lama */
+  scrollbar-width: none; /* Firefox */
+}
+
+.animate-blink {
+  animation: blink 1s step-start infinite;
+}
 
 @theme inline {
   --color-background: var(--background);
