@@ -172,7 +172,7 @@ export default function Home() {
                   : ""
               }`}
             >
-              Enter
+              Ente
             </button>
           </div>
         </div>
