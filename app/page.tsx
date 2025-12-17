@@ -39,25 +39,50 @@ export default function Home() {
   const [text, setText] = useState("");
   const textRef = useRef<HTMLSpanElement>(null);
 
+  // mengubah array ke string
+  // contoh: Mengubah [1,0,0,0,0,0] → "100000"
   const key = dots.join("");
+  // kalo bagian kiri falsy, pakai bagian kanan (dipisahkan OR)
+  // dots.some untuk membedah apakah ada 1 dots yang bernilai 1 alias aktif, kalo ada, pakai tanda tanya, kalo ga, kosongin aja)
   const preview = brailleMap[key] || (dots.some((d) => d === 1) ? "?" : "");
 
-  const toggleDot = (i: number) =>
-    setDots((d) => d.map((v, idx) => (idx === i ? (v ? 0 : 1) : v)));
+  const toggleDot = (i: number) => {
+    //balikkan ON <-> OF dot ke-i, dot lain tetap
+    setDots((d) =>
+      // d = contoh: [0, 1, 0, 1, 0, 0]
+      d.map((v, idx) => {
+        // v = value antara 0 atau 1
+        // idx adalah index dots
+        if (idx === i) {
+          // kalo dots nya sesuai dengan yang mau diubah, maka ganti dari ON ke OFF atau sebaliknya.
+          // kalo ngga, return in aja nilai awal (jangan diubah)
+          return v === 1 ? 0 : 1;
+        }
+        return v;
+      })
+    );
+  };
 
   const playAudio = (letter: string) => {
+    // kalo huruf ada, maka akan dimainkan suara sesuai huruf
     if (letter) new Audio(`/audios/${letter}.mp3`).play();
   };
 
   const handleEnter = () => {
+    // jika preview tidak ada, atau bernilai ?, maka tidak bisa diklik
     if (!preview || preview === "?") return;
+    // menambahkan teks dengan preview huruf
     setText((t) => t + preview);
     playAudio(preview);
+    // reset dots
     setDots(EMPTY_DOTS);
   };
 
+  // ambil string index 0 smpe 1 karakter sebelum akhir
+  // "halo".slice(0, -1) // "hal"
   const handleBackspace = () => setText((t) => t.slice(0, -1));
 
+  // tambah 1 spasi
   const handleSpace = () => setText((t) => t + " ");
 
   useEffect(() => {
@@ -69,19 +94,23 @@ export default function Home() {
       };
 
       if (actions[e.key]) {
+        // mencegah prilaku bawaan browser
         e.preventDefault();
         e.stopPropagation();
+        // ambil fungsi dari action lalu jalankan
         actions[e.key]!();
         return;
       }
-
+      // regex artinya hanya ada 1 karakter dan 1-6 aja
       if (/^[1-6]$/.test(e.key)) {
         e.stopPropagation();
         toggleDot(Number(e.key) - 1);
       }
     };
 
+    // tambahkan listener
     window.addEventListener("keydown", onKey);
+    // hapus listenernya biar ga ketumpuk
     return () => window.removeEventListener("keydown", onKey);
   }, [preview]);
 
@@ -129,7 +158,7 @@ export default function Home() {
           </h1>
 
           {/* Braille dots */}
-          <div className="w-[70%] sm:w-[50%] max-w-50 h-98 grid grid-cols-2 gap-x-6 pt-10">
+          <div className="w-[70%] sm:w-[50%] max-w-50 h-98 grid grid-cols-2 gap-x-6 pt-10 ">
             {dots.map((dot, i) => (
               <button
                 key={i}
